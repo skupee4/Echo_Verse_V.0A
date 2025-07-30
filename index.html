@@ -93,16 +93,10 @@
   <button id="joinGameBtn" disabled>Join the Game</button>
 
   <div class="section">
-    <h3>Current Vault</h3>
-    <!-- Player 1 info -->
-    <p><strong>Player 1 Nickname:</strong> <span id="player1Nickname">Loading...</span></p>
-    <p><strong>Player 1 Address:</strong> <span id="player1Address">Loading...</span></p>
-    <p><strong>Player 1 Remaining Balance:</strong> <span id="player1Balance">Loading...</span> FTM</p>
-    <hr style="border-color: #333;" />
-    <!-- Player 2 info -->
-    <p><strong>Player 2 Nickname:</strong> <span id="player2Nickname">Loading...</span></p>
-    <p><strong>Player 2 Address:</strong> <span id="player2Address">Loading...</span></p>
-    <p><strong>Player 2 Remaining Balance:</strong> <span id="player2Balance">Loading...</span> FTM</p>
+    <h3>The Vault</h3>
+    <p><strong>Nickname:</strong> <span id="mainNickname">Loading...</span></p>
+    <p><strong>Address:</strong> <span id="mainAddress">Loading...</span></p>
+    <p><strong>Remaining Balance:</strong> <span id="mainBalance">Loading...</span> FTM</p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
@@ -115,10 +109,10 @@
     let web3;
     let contract;
 
-    // Contract address (güncelle)
-    const contractAddress = "0x18Bab5BeC7D3d7fbc571D29378121764B19aAD43"; 
+    // Contract address (kendi güncel adresinle değiştir)
+    const contractAddress = "0x18Bab5BeC7D3d7fbc571D29378121764B19aAD43";
 
-    // Contract ABI (gerekli fonksiyon ve player struct için)
+    // Sadece gerekli fonksiyonları içeren basitleştirilmiş ABI
     const contractABI = [
       {
         "inputs": [
@@ -151,18 +145,6 @@
         ],
         "stateMutability": "view",
         "type": "function"
-      },
-      {
-        "inputs": [],
-        "name": "player2",
-        "outputs": [
-          { "internalType": "address", "name": "addr", "type": "address" },
-          { "internalType": "string", "name": "nickname", "type": "string" },
-          { "internalType": "string", "name": "frequency", "type": "string" },
-          { "internalType": "uint256", "name": "balance", "type": "uint256" }
-        ],
-        "stateMutability": "view",
-        "type": "function"
       }
     ];
 
@@ -180,8 +162,7 @@
           contract = new web3.eth.Contract(contractABI, contractAddress);
           checkFormValid();
           await updateVault();
-          // Her 1 saniyede vault bilgilerini güncelle
-          setInterval(updateVault, 1000);
+          setInterval(updateVault, 1000); // Her saniye güncelle
         } catch (err) {
           alert("Wallet connection failed.");
         }
@@ -222,7 +203,7 @@
       }
 
       try {
-        // Önce ikinci oyuncu olarak katılmaya çalış, başarısızsa ilk oyuncu olarak dene
+        // Öncelikle ikinci oyuncu olarak katılmayı dene, başarısızsa ilk oyuncu olarak katıl
         const tx = await contract.methods.joinGameSecond(nickname, frequency).send({
           from: userWalletAddress,
           value: web3.utils.toWei(amount.toString(), 'ether')
@@ -242,26 +223,19 @@
       }
     };
 
-    // Vault bilgilerini blockchain'den çekip DOM'a yazan fonksiyon
     async function updateVault() {
       if (!contract) return;
 
       try {
         const player1 = await contract.methods.player1().call();
-        const player2 = await contract.methods.player2().call();
 
         const player1Balance = web3.utils.fromWei(player1.balance, "ether");
-        const player2Balance = web3.utils.fromWei(player2.balance, "ether");
 
-        document.getElementById("player1Nickname").textContent = player1.nickname || "-";
-        document.getElementById("player1Address").textContent = player1.addr || "-";
-        document.getElementById("player1Balance").textContent = player1Balance || "0";
-
-        document.getElementById("player2Nickname").textContent = player2.nickname || "-";
-        document.getElementById("player2Address").textContent = player2.addr || "-";
-        document.getElementById("player2Balance").textContent = player2Balance || "0";
+        document.getElementById("mainNickname").textContent = player1.nickname || "-";
+        document.getElementById("mainAddress").textContent = player1.addr || "-";
+        document.getElementById("mainBalance").textContent = player1Balance || "0";
       } catch (error) {
-        console.error("Error fetching players info:", error);
+        console.error("Error fetching player1 info:", error);
       }
     }
   </script>
