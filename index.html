@@ -71,19 +71,18 @@
 <body>
 
   <h1>EchoVerse</h1>
-
   <div class="intro">
-    Welcome to EchoVerse! Here, two brave players send their mysterious frequencies into the vast cosmos, competing to carve their names into legend. Each time, their signals merge in a grand cosmic dance, unlocking the doors of chance. The minimum combined bet is 0.2 FTM. The winner receives the galaxy’s energy straight to their wallet, while the loser's frequency echoes endlessly through space. Ready to send your frequency and shine among the stars?
+    Welcome to EchoVerse! Here, two brave players send their mysterious frequencies into the vast cosmos...
   </div>
 
   <label for="nickname">Your Nickname (4–16 characters):</label>
-  <input type="text" id="nickname" placeholder="Enter nickname" maxlength="16" />
+  <input type="text" id="nickname" maxlength="16" />
 
   <label for="frequency">Your Frequency (16 characters):</label>
-  <input type="text" id="frequency" placeholder="Example: A1B2C3D4E5F6G7H8" maxlength="16" />
+  <input type="text" id="frequency" maxlength="16" />
 
   <label for="amount">Amount to Bet (FTM, multiples of 0.1):</label>
-  <input type="number" id="amount" min="0.1" step="0.1" placeholder="Enter amount" />
+  <input type="number" id="amount" min="0.1" step="0.1" />
 
   <button id="connectWalletBtn">Connect Wallet</button>
 
@@ -94,9 +93,14 @@
 
   <div class="section">
     <h3>The Vault</h3>
-    <p><strong>Nickname:</strong> <span id="mainNickname">Loading...</span></p>
-    <p><strong>Address:</strong> <span id="mainAddress">Loading...</span></p>
-    <p><strong>Remaining Balance:</strong> <span id="mainBalance">Loading...</span> FTM</p>
+    <p><strong>Nickname:</strong> <span id="mainNickname">-</span></p>
+    <p><strong>Address:</strong> <span id="mainAddress">-</span></p>
+    <p><strong>Remaining Balance:</strong> <span id="mainBalance">-</span> FTM</p>
+  </div>
+  <div class="section">
+    <h3>The Champ</h3>
+    <p><strong>Nickname:</strong> <span id="champNick">-</span></p>
+    <p><strong>Address:</strong> <span id="champAddr">-</span></p>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
@@ -109,10 +113,10 @@
     let web3;
     let contract;
 
-    // Contract address (kendi güncel adresinle değiştir)
+    // Kendi contract adresinle değiştir
     const contractAddress = "0x18Bab5BeC7D3d7fbc571D29378121764B19aAD43";
 
-    // Sadece gerekli fonksiyonları içeren basitleştirilmiş ABI
+    // Gerekli fonksiyonları ve public değişkenleri kapsayan ABI
     const contractABI = [
       {
         "inputs": [
@@ -145,11 +149,35 @@
         ],
         "stateMutability": "view",
         "type": "function"
-      }
+      },
+      // Son kazanan bilgisi
+      { "inputs": [], "name": "champAddr", "outputs": [{ "internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function" },
+      { "inputs": [], "name": "champNick", "outputs": [{ "internalType": "string", "name": "", "type": "string"}], "stateMutability": "view", "type": "function" }
     ];
 
     function isMultipleOfPointOne(value) {
       return Math.abs(value * 10 - Math.round(value * 10)) < 0.00001;
+    }
+
+    // Vault & Champ bilgilerini tek seferde güncelle
+    async function updateVaultAndChamp() {
+      if (!contract) return;
+      try {
+        const player1 = await contract.methods.player1().call();
+        const player1Balance = web3.utils.fromWei(player1.balance, "ether");
+
+        document.getElementById("mainNickname").textContent = player1.nickname || "-";
+        document.getElementById("mainAddress").textContent = player1.addr || "-";
+        document.getElementById("mainBalance").textContent = player1Balance || "0";
+
+        // The Champ
+        const champAddr = await contract.methods.champAddr().call();
+        const champNick = await contract.methods.champNick().call();
+        document.getElementById("champNick").textContent = champNick || "-";
+        document.getElementById("champAddr").textContent = champAddr || "-";
+      } catch (error) {
+        console.error("Error fetching vault/champ info:", error);
+      }
     }
 
     connectWalletBtn.onclick = async () => {
@@ -161,8 +189,7 @@
           web3 = new Web3(window.ethereum);
           contract = new web3.eth.Contract(contractABI, contractAddress);
           checkFormValid();
-          await updateVault();
-          setInterval(updateVault, 1000); // Her saniye güncelle
+          await updateVaultAndChamp();
         } catch (err) {
           alert("Wallet connection failed.");
         }
@@ -203,12 +230,13 @@
       }
 
       try {
-        // Öncelikle ikinci oyuncu olarak katılmayı dene, başarısızsa ilk oyuncu olarak katıl
+        // Önce ikinci oyuncu olarak katılmayı dene, başarısızsa ilk oyuncu olarak katıl
         const tx = await contract.methods.joinGameSecond(nickname, frequency).send({
           from: userWalletAddress,
           value: web3.utils.toWei(amount.toString(), 'ether')
         });
         alert("Transaction successful! Tx hash: " + tx.transactionHash);
+        await updateVaultAndChamp();
       } catch (err) {
         try {
           const tx = await contract.methods.joinGame(nickname, frequency).send({
@@ -216,6 +244,7 @@
             value: web3.utils.toWei(amount.toString(), 'ether')
           });
           alert("Transaction successful! Tx hash: " + tx.transactionHash);
+          await updateVaultAndChamp();
         } catch (error) {
           console.error(error);
           alert("Transaction failed.");
@@ -223,21 +252,14 @@
       }
     };
 
-    async function updateVault() {
-      if (!contract) return;
-
-      try {
-        const player1 = await contract.methods.player1().call();
-
-        const player1Balance = web3.utils.fromWei(player1.balance, "ether");
-
-        document.getElementById("mainNickname").textContent = player1.nickname || "-";
-        document.getElementById("mainAddress").textContent = player1.addr || "-";
-        document.getElementById("mainBalance").textContent = player1Balance || "0";
-      } catch (error) {
-        console.error("Error fetching player1 info:", error);
+    // Sayfa yüklenince bir kez vault/champ çek
+    window.addEventListener('DOMContentLoaded', async () => {
+      if(typeof window.ethereum !== "undefined"){
+        web3 = new Web3(window.ethereum);
+        contract = new web3.eth.Contract(contractABI, contractAddress);
+        await updateVaultAndChamp();
       }
-    }
+    });
   </script>
 
 </body>
