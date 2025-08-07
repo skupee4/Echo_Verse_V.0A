@@ -13,66 +13,79 @@
       max-width: 600px;
       margin: auto;
     }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #00fff7;
+    h1 { 
+      text-align: center; 
+      margin-bottom: 20px; 
+      color: #00fff7; 
     }
-    .intro {
+    .intro, .gameinfo {
       background-color: #111;
       border-radius: 8px;
       padding: 20px;
-      margin-bottom: 30px;
-      font-style: italic;
-      font-size: 1.1em;
-      line-height: 1.4;
+      margin-bottom: 15px;
+      font-size: 1.08em;
+      line-height: 1.45;
     }
-    label {
-      display: block;
-      margin-top: 20px;
-    }
-    input[type="text"],
-    input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
+    .gameinfo { background:#181b2b; }
+    label { display: block; margin-top: 20px; }
+    input[type="text"], input[type="number"] {
+      width: 100%; 
+      padding: 10px; 
+      margin-top: 5px; 
       border-radius: 4px;
-      border: none;
+      border: none; 
       font-size: 16px;
     }
-    input[readonly] {
-      background-color: #222;
-      color: #ccc;
-    }
+    input[readonly] { background-color: #222; color: #ccc; }
     button {
-      margin-top: 30px;
-      padding: 15px;
+      margin-top: 30px; 
+      padding: 15px; 
       width: 100%;
-      font-size: 16px;
-      background-color: #00fff7;
+      font-size: 16px; 
+      background-color: #00fff7; 
       color: #000;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      border: none; 
+      border-radius: 5px; 
+      cursor: pointer; 
       font-weight: bold;
     }
-    button:disabled {
-      background-color: #444;
-      color: #999;
-      cursor: not-allowed;
+    button:disabled { background-color: #444; color: #999; cursor: not-allowed; }
+    .section { margin-top: 40px; border-top: 1px solid #333; padding-top: 20px; }
+    pre#contractSource { 
+      display:none; 
+      background: #170b2b; 
+      color:#66e9f5; 
+      border-radius:8px; 
+      padding:18px; 
+      margin-top:12px; 
+      font-size:0.9em; 
+      overflow:auto;
+      max-height: 400px;
     }
-    .section {
-      margin-top: 40px;
-      border-top: 1px solid #333;
-      padding-top: 20px;
+    #toggleCodeBtn { 
+      background:#222; 
+      color:#00fff7; 
+      margin-top:16px; 
     }
   </style>
 </head>
 <body>
 
   <h1>EchoVerse</h1>
+
   <div class="intro">
-    Welcome to EchoVerse! Here, two brave players send their mysterious frequencies into the vast cosmos...
+    <p>
+      You send a signal deep into the void of space, hoping it will find a reply somewhere in the vast unknown. Amidst the cosmic silence, a frequency echoes — searching for its counterpart...
+    </p>
+  </div>
+
+  <div class="gameinfo">
+    <p>
+      <strong>How it works:</strong> Two players exchange their secrets and fortunes through a unique frequency. Each round, both contenders bet a minimum of <strong>0.1 Sonic</strong>. The winner takes the entire pool. Click "Join the Game" to send your frequency and face your destiny in EchoVerse!
+    </p>
+    <p style="color:#8aedb7; font-style:italic;">
+      Send your own signal now and seize the chance to connect with unknown beings across the cosmos. In EchoVerse, you are never alone — maybe you’ll be the next to be <strong>The Chosen One</strong>!
+    </p>
   </div>
 
   <label for="nickname">Your Nickname (4–16 characters):</label>
@@ -94,13 +107,33 @@
   <div class="section">
     <h3>The Vault</h3>
     <p><strong>Nickname:</strong> <span id="mainNickname">-</span></p>
-    <p><strong>Address:</strong> <span id="mainAddress">-</span></p>
     <p><strong>Remaining Balance:</strong> <span id="mainBalance">-</span> FTM</p>
   </div>
+
   <div class="section">
-    <h3>The Champ</h3>
-    <p><strong>Nickname:</strong> <span id="champNick">-</span></p>
-    <p><strong>Address:</strong> <span id="champAddr">-</span></p>
+    <h3>The Chosen One</h3>
+    <p><strong>Nickname:</strong> <span id="chosenOneNick">-</span></p>
+  </div>
+
+  <div class="section">
+    <button id="toggleCodeBtn">Transparency: Show Contract Code</button>
+    <pre id="contractSource">
+    // Paste your full updated Solidity contract code here!
+    // Example:
+    // SPDX-License-Identifier: MIT
+    // pragma solidity ^0.8.24;
+    // contract EchoVerseGame {
+    //     ...
+    //     string public champNick;
+    //     ...
+    //     function _resolveGame() internal {
+    //         ...
+    //         string memory winnerNick = (outcome == 0) ? player1.nickname : player2.nickname;
+    //         champNick = winnerNick;
+    //         ...
+    //     }
+    // }
+    </pre>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
@@ -108,15 +141,17 @@
     const connectWalletBtn = document.getElementById("connectWalletBtn");
     const walletAddressInput = document.getElementById("walletAddress");
     const joinGameBtn = document.getElementById("joinGameBtn");
+    const toggleCodeBtn = document.getElementById("toggleCodeBtn");
+    const contractSource = document.getElementById("contractSource");
 
     let userWalletAddress = "";
     let web3;
     let contract;
 
-    // Kendi contract adresinle değiştir
+    // Replace with your deployed contract address
     const contractAddress = "0x18Bab5BeC7D3d7fbc571D29378121764B19aAD43";
 
-    // Gerekli fonksiyonları ve public değişkenleri kapsayan ABI
+    // ABI covering joinGame, player1 struct, and champNick (called chosenOneNick here)
     const contractABI = [
       {
         "inputs": [
@@ -124,16 +159,6 @@
           { "internalType": "string", "name": "frequency", "type": "string" }
         ],
         "name": "joinGame",
-        "outputs": [],
-        "stateMutability": "payable",
-        "type": "function"
-      },
-      {
-        "inputs": [
-          { "internalType": "string", "name": "nickname", "type": "string" },
-          { "internalType": "string", "name": "frequency", "type": "string" }
-        ],
-        "name": "joinGameSecond",
         "outputs": [],
         "stateMutability": "payable",
         "type": "function"
@@ -150,33 +175,32 @@
         "stateMutability": "view",
         "type": "function"
       },
-      // Son kazanan bilgisi
-      { "inputs": [], "name": "champAddr", "outputs": [{ "internalType": "address", "name": "", "type": "address"}], "stateMutability": "view", "type": "function" },
-      { "inputs": [], "name": "champNick", "outputs": [{ "internalType": "string", "name": "", "type": "string"}], "stateMutability": "view", "type": "function" }
+      {
+        "inputs": [],
+        "name": "champNick",  // Using champNick variable as The Chosen One's nickname
+        "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+        "stateMutability": "view",
+        "type": "function"
+      }
     ];
 
     function isMultipleOfPointOne(value) {
       return Math.abs(value * 10 - Math.round(value * 10)) < 0.00001;
     }
 
-    // Vault & Champ bilgilerini tek seferde güncelle
-    async function updateVaultAndChamp() {
+    async function updateVaultAndChosenOne() {
       if (!contract) return;
       try {
         const player1 = await contract.methods.player1().call();
-        const player1Balance = web3.utils.fromWei(player1.balance, "ether");
+        const balanceInEther = web3.utils.fromWei(player1.balance, "ether");
 
         document.getElementById("mainNickname").textContent = player1.nickname || "-";
-        document.getElementById("mainAddress").textContent = player1.addr || "-";
-        document.getElementById("mainBalance").textContent = player1Balance || "0";
+        document.getElementById("mainBalance").textContent = balanceInEther || "0";
 
-        // The Champ
-        const champAddr = await contract.methods.champAddr().call();
-        const champNick = await contract.methods.champNick().call();
-        document.getElementById("champNick").textContent = champNick || "-";
-        document.getElementById("champAddr").textContent = champAddr || "-";
+        const chosenOneNick = await contract.methods.champNick().call();
+        document.getElementById("chosenOneNick").textContent = chosenOneNick || "-";
       } catch (error) {
-        console.error("Error fetching vault/champ info:", error);
+        console.error("Error fetching vault or chosen one info:", error);
       }
     }
 
@@ -186,10 +210,12 @@
           const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
           userWalletAddress = accounts[0];
           walletAddressInput.value = userWalletAddress;
+
           web3 = new Web3(window.ethereum);
           contract = new web3.eth.Contract(contractABI, contractAddress);
+
           checkFormValid();
-          await updateVaultAndChamp();
+          await updateVaultAndChosenOne();
         } catch (err) {
           alert("Wallet connection failed.");
         }
@@ -230,36 +256,35 @@
       }
 
       try {
-        // Önce ikinci oyuncu olarak katılmayı dene, başarısızsa ilk oyuncu olarak katıl
-        const tx = await contract.methods.joinGameSecond(nickname, frequency).send({
+        const tx = await contract.methods.joinGame(nickname, frequency).send({
           from: userWalletAddress,
           value: web3.utils.toWei(amount.toString(), 'ether')
         });
         alert("Transaction successful! Tx hash: " + tx.transactionHash);
-        await updateVaultAndChamp();
-      } catch (err) {
-        try {
-          const tx = await contract.methods.joinGame(nickname, frequency).send({
-            from: userWalletAddress,
-            value: web3.utils.toWei(amount.toString(), 'ether')
-          });
-          alert("Transaction successful! Tx hash: " + tx.transactionHash);
-          await updateVaultAndChamp();
-        } catch (error) {
-          console.error(error);
-          alert("Transaction failed.");
-        }
+        await updateVaultAndChosenOne();
+      } catch (error) {
+        console.error(error);
+        alert("Transaction failed.");
       }
     };
 
-    // Sayfa yüklenince bir kez vault/champ çek
     window.addEventListener('DOMContentLoaded', async () => {
-      if(typeof window.ethereum !== "undefined"){
+      if (typeof window.ethereum !== "undefined") {
         web3 = new Web3(window.ethereum);
         contract = new web3.eth.Contract(contractABI, contractAddress);
-        await updateVaultAndChamp();
+        await updateVaultAndChosenOne();
       }
     });
+
+    toggleCodeBtn.onclick = () => {
+      if (contractSource.style.display === "none") {
+        contractSource.style.display = "block";
+        toggleCodeBtn.textContent = "Hide Contract Code";
+      } else {
+        contractSource.style.display = "none";
+        toggleCodeBtn.textContent = "Transparency: Show Contract Code";
+      }
+    };
   </script>
 
 </body>
